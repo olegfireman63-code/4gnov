@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>eCAPTCHA · Подтверждение личности</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: linear-gradient(145deg, #e9f0f5 0%, #dce5ed 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+      padding: 20px;
+    }
+
+    .ecaptcha-container {
+      max-width: 500px;
+      width: 100%;
+      background: #ffffff;
+      border-radius: 28px;
+      box-shadow: 0 25px 45px -12px rgba(0, 0, 0, 0.3), 0 2px 6px rgba(0, 0, 0, 0.05);
+      overflow: hidden;
+      transition: all 0.2s;
+      animation: fadeSlideUp 0.4s ease;
+    }
+
+    @keyframes fadeSlideUp {
+      from {
+        opacity: 0;
+        transform: translateY(24px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .ecaptcha-header {
+      background: #1a2e3f;
+      padding: 1.2rem 1.8rem;
+      color: white;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 3px solid #f5b042;
+    }
+    .ecaptcha-header h2 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+    }
+    .ecaptcha-header span {
+      font-size: 1.8rem;
+    }
+
+    .ecaptcha-body {
+      padding: 1.8rem 1.8rem 1.5rem;
+    }
+
+    .robot-check-card {
+      background: #f9fafc;
+      border: 2px solid #e4e9f0;
+      border-radius: 1.2rem;
+      padding: 0.9rem 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 1.2rem;
+    }
+    .robot-check-card:hover {
+      background: #f2f5f9;
+      border-color: #cbd5e1;
+    }
+    .fake-checkbox {
+      width: 34px;
+      height: 34px;
+      background: white;
+      border: 2px solid #b9c4d1;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: 0.1s;
+      flex-shrink: 0;
+    }
+    .fake-checkbox.checked {
+      background: #1f7b3e;
+      border-color: #1f7b3e;
+    }
+    .fake-checkbox.checked::after {
+      content: "✓";
+      color: white;
+      font-size: 1.4rem;
+      font-weight: bold;
+    }
+    .robot-text {
+      font-weight: 500;
+      color: #0f172a;
+    }
+    .robot-text .small-note {
+      font-size: 0.7rem;
+      color: #5b6e8c;
+      display: block;
+    }
+
+    .extra-test-panel {
+      background: #fffae9;
+      border-radius: 1.2rem;
+      padding: 1rem 1rem 1.2rem;
+      margin-top: 0.5rem;
+      border: 2px solid #fedf89;
+      display: none;
+      animation: fadeSlide 0.25s ease;
+    }
+    .extra-test-panel.active {
+      display: block;
+    }
+    @keyframes fadeSlide {
+      from {
+        opacity: 0;
+        transform: translateY(-6px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .test-title {
+      font-weight: 700;
+      font-size: 0.9rem;
+      margin-bottom: 12px;
+      background: #feeec8;
+      display: inline-block;
+      padding: 4px 14px;
+      border-radius: 40px;
+      color: #a16207;
+    }
+    .test-question {
+      font-size: 0.9rem;
+      margin-bottom: 16px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .grid-3x3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin: 12px 0 18px;
+    }
+    .grid-tile {
+      aspect-ratio: 1 / 1;
+      background: white;
+      border: 2px solid #e2e8f0;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.4rem;
+      cursor: pointer;
+      transition: 0.07s linear;
+      background: #ffffff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+    .grid-tile.selected {
+      background: #c6f0d0;
+      border-color: #2b8c4a;
+      transform: scale(0.97);
+      box-shadow: 0 4px 8px rgba(34,197,94,0.15);
+    }
+    .grid-tile:active {
+      transform: scale(0.96);
+    }
+    .test-buttons {
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
+    }
+    .btn {
+      flex: 1;
+      padding: 12px;
+      border-radius: 60px;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: 0.2s;
+    }
+    .btn-primary {
+      background: #1e4b6e;
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #0f3b54;
+    }
+    .btn-secondary {
+      background: #e9eef3;
+      color: #2c3e50;
+    }
+    .btn-success {
+      background: #1f7b3e;
+      color: white;
+    }
+    .btn-success:hover {
+      background: #156e3a;
+    }
+    .status-message {
+      margin-top: 20px;
+      padding: 12px 16px;
+      border-radius: 60px;
+      font-size: 0.8rem;
+      background: #f1f5f9;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #1e2a3a;
+    }
+    .success {
+      background: #dff9e6;
+      color: #156e3a;
+      border-left: 4px solid #2ecc71;
+    }
+    .error {
+      background: #ffe6e5;
+      color: #b91c1c;
+      border-left: 4px solid #e74c3c;
+    }
+    .loading {
+      background: #eef2ff;
+      color: #1e40af;
+    }
+    .captcha-footer {
+      background: #f7f9fc;
+      padding: 0.9rem 1.8rem;
+      font-size: 0.65rem;
+      text-align: center;
+      color: #5e6f8d;
+      border-top: 1px solid #e9edf2;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .reset-link {
+      background: none;
+      border: none;
+      color: #3f6b9e;
+      text-decoration: underline;
+      cursor: pointer;
+      font-size: 0.7rem;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+    .redirect-button {
+      margin-top: 16px;
+      width: 100%;
+      padding: 14px;
+      font-size: 1rem;
+    }
+  </style>
+</head>
+<body>
+<div class="ecaptcha-container" id="ecaptchaRoot">
+  <div class="ecaptcha-header">
+    <span>🛡️</span>
+    <h2>eCAPTCHA · проверка</h2>
+  </div>
+
+  <div class="ecaptcha-body">
+    <div class="robot-check-card" id="mainRobotCheck">
+      <div class="fake-checkbox" id="mainCheckbox"></div>
+      <div class="robot-text">
+        Я не робот
+        <span class="small-note">Нажмите, чтобы подтвердить</span>
+      </div>
+    </div>
+
+    <div id="extraTestBlock" class="extra-test-panel">
+      <div class="test-title">🔎 Дополнительная верификация</div>
+      <div class="test-question">
+        <span>🧩 Выберите все квадраты, содержащие знак</span>
+        <strong style="background:#ffecb3; padding:4px 10px; border-radius:40px;">➕ (плюс)</strong>
+      </div>
+      <div class="grid-3x3" id="captchaGrid"></div>
+      <div class="test-buttons">
+        <button id="submitGridBtn" class="btn btn-primary">✅ Подтвердить</button>
+        <button id="resetGridBtn" class="btn btn-secondary">⟳ Сброс</button>
+      </div>
+    </div>
+
+    <div class="status-message" id="statusMsg">
+      <span>🤖</span> Нажмите «Я не робот» для начала проверки
+    </div>
+  </div>
+
+  <div class="captcha-footer">
+    <span class="badge-ecaptcha">⚡ eCAPTCHA · защита от ботов</span>
+    <button id="fullResetCaptchaBtn" class="reset-link">⟳ Сбросить всё</button>
+  </div>
+</div>
+
+<script>
+  // =================================================================
+  // eCAPTCHA с ручным переходом (чтобы избежать ошибки 403)
+  // =================================================================
+  
+  // Укажите правильный путь к вашему HTML-файлу с правилами чата
+  // ВАЖНО: переименуйте файл в латиницу, например: rules.html
+  // Или укажите полный URL:
+  const TARGET_URL = "rules.html";  // <- ПЕРЕИМЕНУЙТЕ ваш файл в rules.html
+  
+  // Если файл называется по-другому, измените строку выше.
+  // Например: "4zh-rules.html" или "chat-rules.html"
+  // Или полная ссылка: "https://ваш-сайт.ru/pravila-chata.html"
+
+  let step = "initial";
+  let extraActive = false;
+  let selectedIndices = [];
+  let gridItems = [];
+  let verificationPassed = false;
+
+  const mainCheckBoxArea = document.getElementById("mainRobotCheck");
+  const mainCheckboxDiv = document.getElementById("mainCheckbox");
+  const extraBlock = document.getElementById("extraTestBlock");
+  const gridContainer = document.getElementById("captchaGrid");
+  const submitGridBtn = document.getElementById("submitGridBtn");
+  const resetGridBtn = document.getElementById("resetGridBtn");
+  const statusMsgDiv = document.getElementById("statusMsg");
+  const fullResetBtn = document.getElementById("fullResetCaptchaBtn");
+
+  function setStatusMessage(text, type = "info") {
+    let icon = "ℹ️";
+    if (type === "success") icon = "✅";
+    if (type === "error") icon = "⚠️";
+    if (type === "loading") icon = "⏳";
+    statusMsgDiv.innerHTML = `<span>${icon}</span> ${text}`;
+    statusMsgDiv.className = `status-message ${type}`;
+  }
+
+  function generateRandomGrid() {
+    const symbols = ['🔲', '⬜', '🔘', '▲', '■', '●', '◆', '⬛', '❌', '⭕', '🔷', '⭐'];
+    const items = new Array(9).fill(null);
+    const plusPositions = [];
+    while (plusPositions.length < 4) {
+      const rand = Math.floor(Math.random() * 9);
+      if (!plusPositions.includes(rand)) plusPositions.push(rand);
+    }
+    for (let i = 0; i < 9; i++) {
+      if (plusPositions.includes(i)) {
+        items[i] = { type: 'plus', display: '➕' };
+      } else {
+        const randSym = symbols[Math.floor(Math.random() * symbols.length)];
+        items[i] = { type: 'other', display: randSym };
+      }
+    }
+    return items;
+  }
+
+  function renderGrid() {
+    if (!gridContainer) return;
+    gridContainer.innerHTML = "";
+    for (let i = 0; i < gridItems.length; i++) {
+      const tile = gridItems[i];
+      const div = document.createElement("div");
+      div.className = "grid-tile";
+      if (selectedIndices.includes(i)) div.classList.add("selected");
+      div.textContent = tile.display;
+      div.style.fontSize = "2rem";
+      div.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (step !== "extra") return;
+        if (selectedIndices.includes(i)) {
+          selectedIndices = selectedIndices.filter(idx => idx !== i);
+        } else {
+          selectedIndices.push(i);
+        }
+        renderGrid();
+      });
+      gridContainer.appendChild(div);
+    }
+  }
+
+  function resetExtraSelection() {
+    if (step !== "extra") return;
+    selectedIndices = [];
+    renderGrid();
+    setStatusMessage("Выбор сброшен. Отметьте все квадраты со знаком плюс.", "info");
+  }
+
+  function showRedirectButton() {
+    // Удаляем старую кнопку, если есть
+    const oldBtn = document.getElementById("manualRedirectBtn");
+    if (oldBtn) oldBtn.remove();
+    
+    const btn = document.createElement("button");
+    btn.id = "manualRedirectBtn";
+    btn.className = "btn btn-success redirect-button";
+    btn.innerHTML = "🚪 Перейти к правилам чата →";
+    btn.style.marginTop = "20px";
+    btn.style.width = "100%";
+    btn.onclick = () => {
+      try {
+        window.location.href = TARGET_URL;
+      } catch(e) {
+        setStatusMessage("Ошибка перехода. Скопируйте ссылку: " + TARGET_URL, "error");
+      }
+    };
+    document.querySelector(".ecaptcha-body").appendChild(btn);
+  }
+
+  function verifyExtraTest() {
+    if (step !== "extra") return false;
+    const plusIndices = [];
+    for (let i = 0; i < gridItems.length; i++) {
+      if (gridItems[i].type === "plus") plusIndices.push(i);
+    }
+    const allPlusSelected = plusIndices.every(idx => selectedIndices.includes(idx));
+    const noExtraSelected = selectedIndices.every(idx => plusIndices.includes(idx));
+    const correct = allPlusSelected && noExtraSelected && plusIndices.length === selectedIndices.length;
+
+    if (correct) {
+      setStatusMessage("✅ Проверка пройдена! Вы человек. Нажмите на кнопку ниже для перехода.", "success");
+      step = "verified";
+      extraActive = false;
+      extraBlock.classList.remove("active");
+      mainCheckboxDiv.classList.add("checked");
+      mainCheckBoxArea.style.pointerEvents = "none";
+      mainCheckBoxArea.style.opacity = "0.9";
+      verificationPassed = true;
+      showRedirectButton();
+      return true;
+    } else {
+      setStatusMessage("❌ Неправильно! Выберите ВСЕ квадраты с плюсом (➕) и только их. Попробуйте ещё раз.", "error");
+      return false;
+    }
+  }
+
+  function activateExtraTest() {
+    if (step === "verified") return;
+    gridItems = generateRandomGrid();
+    selectedIndices = [];
+    renderGrid();
+    extraBlock.classList.add("active");
+    step = "extra";
+    extraActive = true;
+    setStatusMessage("⚠️ Дополнительная проверка: выберите все квадраты, на которых изображен знак «плюс» (+)", "info");
+  }
+
+  function onMainCheckboxClick() {
+    if (step === "verified") {
+      setStatusMessage("Вы уже прошли капчу. Нажмите кнопку ниже для перехода.", "info");
+      return;
+    }
+    if (step === "extra") {
+      setStatusMessage("Сначала завершите тест с картинками (выберите все плюсы).", "error");
+      return;
+    }
+    if (step === "initial") {
+      setStatusMessage("🔍 Проводим дополнительную проверку... выберите все квадраты с плюсом.", "loading");
+      setTimeout(() => {
+        activateExtraTest();
+      }, 300);
+    }
+  }
+
+  function fullReset() {
+    step = "initial";
+    extraActive = false;
+    extraBlock.classList.remove("active");
+    mainCheckboxDiv.classList.remove("checked");
+    mainCheckBoxArea.style.pointerEvents = "auto";
+    mainCheckBoxArea.style.opacity = "1";
+    selectedIndices = [];
+    gridItems = [];
+    verificationPassed = false;
+    if (gridContainer) gridContainer.innerHTML = "";
+    const oldBtn = document.getElementById("manualRedirectBtn");
+    if (oldBtn) oldBtn.remove();
+    setStatusMessage("Состояние сброшено. Нажмите «Я не робот» для проверки.", "info");
+  }
+
+  function bindEvents() {
+    mainCheckBoxArea.addEventListener("click", onMainCheckboxClick);
+    submitGridBtn.addEventListener("click", () => {
+      if (step === "extra") verifyExtraTest();
+      else setStatusMessage("Нет активного теста", "error");
+    });
+    resetGridBtn.addEventListener("click", () => {
+      if (step === "extra") resetExtraSelection();
+      else setStatusMessage("Неактивно", "info");
+    });
+    fullResetBtn.addEventListener("click", fullReset);
+  }
+
+  function init() {
+    bindEvents();
+    fullReset();
+  }
+  init();
+</script>
+</body>
+</html>
